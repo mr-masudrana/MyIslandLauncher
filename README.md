@@ -35,3 +35,16 @@ A root-free Android floating pill demo for HyperOS. This is a source project; AP
 - Launcher icon uses Android adaptive icon resources, suitable for modern Android launchers.
 - Splash screen uses AndroidX Core SplashScreen and automatically transitions to the app theme.
 - To see the new icon, install/update the APK. If HyperOS caches the old icon, clear launcher cache or reboot; do not clear MyIsland app data unless necessary.
+
+
+## v0.4.1 crash fix
+- Dynamic broadcast receivers now use explicit `RECEIVER_NOT_EXPORTED` flags for modern Android versions.
+- Start-service exceptions are caught and surfaced as status text.
+- If the app still closes, capture Logcat from the crash to identify device-specific issues.
+
+
+## v0.4.2 live UI state
+- Permission labels refresh automatically when returning from Android Settings (`ON_RESUME`).
+- Start/Stop buttons update immediately and reflect the service state.
+- Start button is disabled while running; Stop button is disabled while stopped.
+- This source has not been built on a device here; run GitHub Actions and share logs if it fails.
