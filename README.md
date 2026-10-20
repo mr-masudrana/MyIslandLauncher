@@ -75,3 +75,21 @@ A root-free Android floating pill demo for HyperOS. This is a source project; AP
 - This source update has not been built/tested on a physical device. Verify GitHub Actions logs and test media controls on device.
 
 - Overlay accepts touch so media buttons can be used; keep controls small and test interactions over other apps on HyperOS.
+
+
+## v0.5.1 persistent call/media and notification tap
+- Ongoing notifications (including detected call/media notifications) do not auto-hide on the normal 5-second timer.
+- Notification removal events can close the matching persistent pill after a short delay.
+- Battery broadcasts only trigger the charging pill on a charging-state transition, avoiding repeated flicker; battery percentage updates while the charging pill is visible.
+- The pill stores the notification content PendingIntent and sends it when tapped, falling back to launching the source app.
+- Note: phone-call notification categorization varies by dialer/OEM; ongoing call display must be verified on HyperOS.
+- Source has not been built or tested on a physical device.
+
+
+## v0.5.2 - Settings and app selector
+- Home page has a settings icon in the top bar.
+- Settings page separates Appearance and Activities.
+- Home page shows a Select apps button under the two permission cards.
+- App selector supports individual app selection, Select all, and clear all by toggling Select all off.
+- App choices persist locally. The notification filter is only restrictive when "Only selected apps" is enabled; otherwise notifications from all apps may show.
+- Build with GitHub Actions workflow and download `MyIsland-v0.5.2-debug-apk`.

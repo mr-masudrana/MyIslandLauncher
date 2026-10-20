@@ -15,10 +15,15 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PowerSettingsNew
+import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -35,17 +40,19 @@ private val Accent = Color(0xFFB7F36B)
 private val Card = Color(0xFF202431)
 
 data class AppChoice(val label: String, val packageName: String)
+private enum class Screen { HOME, SETTINGS, APPS }
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { SetupScreen() }
+        setContent { MyIslandApp() }
     }
 }
 
 @Composable
-private fun SetupScreen() {
+private fun MyIslandApp() {
     val context = androidx.compose.ui.platform.LocalContext.current
+    var screen by remember { mutableStateOf(Screen.HOME) }
     var overlayAllowed by remember { mutableStateOf(Settings.canDrawOverlays(context)) }
     var listenerAllowed by remember { mutableStateOf(isNotificationListenerEnabled(context)) }
     var running by remember { mutableStateOf(isIslandServiceRunning(context)) }
@@ -80,131 +87,235 @@ private fun SetupScreen() {
 
     MaterialTheme(colorScheme = darkColorScheme(primary = Accent, background = Background, surface = Card)) {
         Surface(Modifier.fillMaxSize(), color = Background) {
-            LazyColumn(
-                Modifier.fillMaxSize().padding(horizontal = 20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                contentPadding = PaddingValues(top = 24.dp, bottom = 24.dp)
-            ) {
-                item {
-                    Text("MYISLAND", color = Accent, fontSize = 13.sp, fontWeight = FontWeight.Bold, letterSpacing = 4.sp)
-                    Spacer(Modifier.height(10.dp))
-                    Text("Notification Control", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-                    Text("A small island. Useful moments.", color = Color.LightGray, fontSize = 14.sp)
-                    Spacer(Modifier.height(20.dp))
-                    Box(Modifier.background(Color(AndroidColor.BLACK), RoundedCornerShape(40.dp)).padding(horizontal = 28.dp, vertical = 15.dp)) {
-                        Text("●  MY ISLAND", color = Color.White, fontWeight = FontWeight.Bold)
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    Text("v0.5.0 • notification controls", color = Color.Gray, fontSize = 12.sp)
-                    Spacer(Modifier.height(22.dp))
-                    PermissionCard("Display over other apps", "Required for the floating pill", overlayAllowed) {
+            when (screen) {
+                Screen.HOME -> HomeScreen(
+                    overlayAllowed = overlayAllowed,
+                    listenerAllowed = listenerAllowed,
+                    running = running,
+                    status = status,
+                    selectedCount = selectedApps.size,
+                    onSettings = { screen = Screen.SETTINGS },
+                    onSelectApps = { screen = Screen.APPS },
+                    onOverlayPermission = {
                         overlayLauncher.launch(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}")))
-                    }
-                    Spacer(Modifier.height(10.dp))
-                    PermissionCard("Notification access", "Needed for notifications and media sessions", listenerAllowed) {
+                    },
+                    onNotificationPermission = {
                         listenerLauncher.launch(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
-                    }
-                    Spacer(Modifier.height(20.dp))
-                    SectionTitle("Dynamic Island appearance")
-                    SettingSlider("Position from top", topOffset, 0f, 80f, "dp") {
-                        topOffset = it; IslandPrefs.setTopOffset(context, it.toInt())
-                    }
-                    SettingSlider("Pill width", width, 180f, 360f, "dp") {
-                        width = it; IslandPrefs.setPillWidth(context, it.toInt())
-                    }
-                    SettingSlider("Pill height", height, 48f, 100f, "dp") {
-                        height = it; IslandPrefs.setPillHeight(context, it.toInt())
-                    }
-                    Text("Pill color", color = Color.White, fontWeight = FontWeight.SemiBold, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
-                    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        listOf(AndroidColor.BLACK, 0xFF161820.toInt(), 0xFF243044.toInt(), 0xFF172817.toInt()).forEach { color ->
-                            Surface(
-                                onClick = { colorChoice = color; IslandPrefs.setPillColor(context, color) },
-                                color = Color(color), shape = RoundedCornerShape(50),
-                                border = androidx.compose.foundation.BorderStroke(if (colorChoice == color) 3.dp else 1.dp, if (colorChoice == color) Accent else Color.Gray),
-                                modifier = Modifier.size(42.dp)
-                            ) {}
-                        }
-                    }
-                    HorizontalDivider(color = Color.DarkGray, modifier = Modifier.padding(vertical = 12.dp))
-                    SectionTitle("Notification privacy")
-                    SettingSwitch("Only selected apps", "Hide notifications from apps not selected below", filterEnabled) {
-                        filterEnabled = it; IslandPrefs.setAppFilter(context, it)
-                    }
-                    Text("Choose apps allowed to appear in the island", color = Color.LightGray, fontSize = 12.sp, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp))
-                }
-                items(apps, key = { it.packageName }) { app ->
-                    Row(
-                        Modifier.fillMaxWidth().background(Card, RoundedCornerShape(12.dp)).padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(Modifier.weight(1f)) {
-                            Text(app.label, color = Color.White, fontSize = 14.sp)
-                            Text(app.packageName, color = Color.Gray, fontSize = 10.sp)
-                        }
-                        Checkbox(
-                            checked = selectedApps.contains(app.packageName),
-                            onCheckedChange = { checked ->
-                                selectedApps = if (checked) selectedApps + app.packageName else selectedApps - app.packageName
-                                IslandPrefs.setSelectedPackages(context, selectedApps)
-                            },
-                            colors = CheckboxDefaults.colors(checkedColor = Accent)
-                        )
-                    }
-                    Spacer(Modifier.height(5.dp))
-                }
-                item {
-                    HorizontalDivider(color = Color.DarkGray, modifier = Modifier.padding(vertical = 12.dp))
-                    SectionTitle("Live activities")
-                    SettingSwitch("Music controls", "Show media sessions and playback buttons when available", musicEnabled) {
-                        musicEnabled = it; IslandPrefs.setMusicEnabled(context, it)
-                    }
-                    SettingSwitch("Charging animation", "Show charging state and battery percentage", chargingEnabled) {
-                        chargingEnabled = it; IslandPrefs.setChargingEnabled(context, it)
-                    }
-                    Spacer(Modifier.height(12.dp))
-                    Button(
-                        onClick = {
-                            refreshPermissions()
-                            if (!overlayAllowed) status = "Allow Display over other apps first"
-                            else {
-                                try {
-                                    context.startService(Intent(context, IslandOverlayService::class.java).setAction(IslandOverlayService.ACTION_START))
-                                    running = true; status = "Island running"
-                                } catch (e: Exception) {
-                                    running = false; status = "Could not start: ${e.javaClass.simpleName}"
-                                }
+                    },
+                    onStart = {
+                        refreshPermissions()
+                        if (!overlayAllowed) status = "Allow Display over other apps first"
+                        else {
+                            try {
+                                context.startService(Intent(context, IslandOverlayService::class.java).setAction(IslandOverlayService.ACTION_START))
+                                running = true; status = "Island running"
+                            } catch (e: Exception) {
+                                running = false; status = "Could not start: ${e.javaClass.simpleName}"
                             }
-                        },
-                        modifier = Modifier.fillMaxWidth().height(52.dp),
-                        enabled = overlayAllowed && !running,
-                        shape = RoundedCornerShape(16.dp)
-                    ) { Text(if (running) "Dynamic Island Running" else "Start Dynamic Island") }
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedButton(
-                        onClick = {
-                            context.stopService(Intent(context, IslandOverlayService::class.java))
-                            running = false; status = "Island stopped"
-                        },
-                        modifier = Modifier.fillMaxWidth().height(50.dp),
-                        enabled = running,
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Icon(Icons.Default.PowerSettingsNew, null); Spacer(Modifier.width(8.dp)); Text("Stop Island")
+                        }
+                    },
+                    onStop = {
+                        context.stopService(Intent(context, IslandOverlayService::class.java))
+                        running = false; status = "Island stopped"
                     }
-                    Spacer(Modifier.height(10.dp))
-                    Text(status, color = Color.LightGray, fontSize = 12.sp)
-                    Spacer(Modifier.height(8.dp))
-                    Text("Notification content is processed locally. Selected-app filtering is optional.", color = Color.Gray, fontSize = 11.sp)
-                }
+                )
+                Screen.SETTINGS -> SettingsScreen(
+                    onBack = { screen = Screen.HOME },
+                    topOffset = topOffset, width = width, height = height, colorChoice = colorChoice,
+                    musicEnabled = musicEnabled, chargingEnabled = chargingEnabled,
+                    onTopOffset = { topOffset = it; IslandPrefs.setTopOffset(context, it.toInt()) },
+                    onWidth = { width = it; IslandPrefs.setPillWidth(context, it.toInt()) },
+                    onHeight = { height = it; IslandPrefs.setPillHeight(context, it.toInt()) },
+                    onColor = { colorChoice = it; IslandPrefs.setPillColor(context, it) },
+                    onMusic = { musicEnabled = it; IslandPrefs.setMusicEnabled(context, it) },
+                    onCharging = { chargingEnabled = it; IslandPrefs.setChargingEnabled(context, it) }
+                )
+                Screen.APPS -> AppSelectorScreen(
+                    apps = apps,
+                    selectedApps = selectedApps,
+                    filterEnabled = filterEnabled,
+                    onBack = { screen = Screen.HOME },
+                    onFilter = { filterEnabled = it; IslandPrefs.setAppFilter(context, it) },
+                    onToggleApp = { pkg, checked ->
+                        selectedApps = if (checked) selectedApps + pkg else selectedApps - pkg
+                        IslandPrefs.setSelectedPackages(context, selectedApps)
+                    },
+                    onSelectAll = { checked ->
+                        selectedApps = if (checked) apps.map { it.packageName }.toSet() else emptySet()
+                        IslandPrefs.setSelectedPackages(context, selectedApps)
+                    }
+                )
             }
         }
     }
 }
 
 @Composable
-private fun SectionTitle(title: String) {
-    Text(title, color = Accent, fontWeight = FontWeight.Bold, fontSize = 17.sp, modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp))
+private fun HomeScreen(
+    overlayAllowed: Boolean, listenerAllowed: Boolean, running: Boolean, status: String,
+    selectedCount: Int, onSettings: () -> Unit, onSelectApps: () -> Unit,
+    onOverlayPermission: () -> Unit, onNotificationPermission: () -> Unit,
+    onStart: () -> Unit, onStop: () -> Unit
+) {
+    LazyColumn(
+        Modifier.fillMaxSize().padding(horizontal = 20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        contentPadding = PaddingValues(top = 12.dp, bottom = 24.dp)
+    ) {
+        item {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("MyIsland", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                IconButton(onClick = onSettings) {
+                    Icon(Icons.Default.Settings, contentDescription = "Settings", tint = Accent, modifier = Modifier.size(28.dp))
+                }
+            }
+            Spacer(Modifier.height(20.dp))
+            Text("MYISLAND", color = Accent, fontSize = 13.sp, fontWeight = FontWeight.Bold, letterSpacing = 4.sp)
+            Spacer(Modifier.height(10.dp))
+            Text("Notification Island", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+            Text("Your notifications, in one little island.", color = Color.LightGray, fontSize = 14.sp)
+            Spacer(Modifier.height(28.dp))
+            Box(Modifier.background(Color(AndroidColor.BLACK), RoundedCornerShape(40.dp)).padding(horizontal = 28.dp, vertical = 15.dp)) {
+                Text("●  MY ISLAND", color = Color.White, fontWeight = FontWeight.Bold)
+            }
+            Spacer(Modifier.height(10.dp))
+            Text("v0.5.2 • app selection & settings", color = Color.Gray, fontSize = 12.sp)
+            Spacer(Modifier.height(24.dp))
+            PermissionCard("Display over other apps", "Required for the floating pill", overlayAllowed, onOverlayPermission)
+            Spacer(Modifier.height(10.dp))
+            PermissionCard("Notification access", "Needed to read notification events", listenerAllowed, onNotificationPermission)
+            Spacer(Modifier.height(12.dp))
+            OutlinedButton(
+                onClick = onSelectApps,
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                shape = RoundedCornerShape(15.dp)
+            ) {
+                Icon(Icons.Default.Apps, null, tint = Accent)
+                Spacer(Modifier.width(10.dp))
+                Text("Select apps", color = Color.White)
+                Spacer(Modifier.width(8.dp))
+                Text(if (selectedCount == 0) "All apps" else "$selectedCount selected", color = Accent, fontSize = 12.sp)
+            }
+            Spacer(Modifier.height(22.dp))
+            Button(
+                onClick = onStart,
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                enabled = overlayAllowed && !running,
+                shape = RoundedCornerShape(16.dp)
+            ) { Text(if (running) "Dynamic Island Running" else "Start Dynamic Island") }
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = onStop,
+                modifier = Modifier.fillMaxWidth().height(50.dp),
+                enabled = running,
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Icon(Icons.Default.PowerSettingsNew, null); Spacer(Modifier.width(8.dp)); Text("Stop Island")
+            }
+            Spacer(Modifier.height(10.dp))
+            Text(status, color = Color.LightGray, fontSize = 12.sp)
+            Spacer(Modifier.height(8.dp))
+            Text("Notification content is processed locally on this device.", color = Color.Gray, fontSize = 11.sp)
+        }
+    }
+}
+
+@Composable
+private fun SettingsScreen(
+    onBack: () -> Unit,
+    topOffset: Float, width: Float, height: Float, colorChoice: Int,
+    musicEnabled: Boolean, chargingEnabled: Boolean,
+    onTopOffset: (Float) -> Unit, onWidth: (Float) -> Unit, onHeight: (Float) -> Unit,
+    onColor: (Int) -> Unit, onMusic: (Boolean) -> Unit, onCharging: (Boolean) -> Unit
+) {
+    LazyColumn(Modifier.fillMaxSize().padding(horizontal = 20.dp), contentPadding = PaddingValues(top = 12.dp, bottom = 28.dp)) {
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back", tint = Color.White) }
+                Text("Settings", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            }
+            Spacer(Modifier.height(16.dp))
+            Text("APPEARANCE", color = Accent, fontSize = 13.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+            Spacer(Modifier.height(12.dp))
+            SettingSlider("Position from top", topOffset, 0f, 80f, "dp", onTopOffset)
+            SettingSlider("Pill width", width, 180f, 360f, "dp", onWidth)
+            SettingSlider("Pill height", height, 48f, 100f, "dp", onHeight)
+            Text("Pill color", color = Color.White, fontWeight = FontWeight.SemiBold, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+            Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                listOf(AndroidColor.BLACK, 0xFF161820.toInt(), 0xFF243044.toInt(), 0xFF172817.toInt()).forEach { color ->
+                    Surface(
+                        onClick = { onColor(color) },
+                        color = Color(color), shape = CircleShape,
+                        border = androidx.compose.foundation.BorderStroke(if (colorChoice == color) 3.dp else 1.dp, if (colorChoice == color) Accent else Color.Gray),
+                        modifier = Modifier.size(42.dp)
+                    ) {}
+                }
+            }
+            HorizontalDivider(color = Color.DarkGray, modifier = Modifier.padding(vertical = 18.dp))
+            Text("ACTIVITIES", color = Accent, fontSize = 13.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+            Spacer(Modifier.height(8.dp))
+            SettingSwitch("Music controls", "Show media playback controls when available", musicEnabled, onMusic)
+            SettingSwitch("Charging animation", "Show charging state and battery percentage", chargingEnabled, onCharging)
+            Spacer(Modifier.height(16.dp))
+            Text("Changes are saved automatically.", color = Color.Gray, fontSize = 12.sp)
+        }
+    }
+}
+
+@Composable
+private fun AppSelectorScreen(
+    apps: List<AppChoice>, selectedApps: Set<String>, filterEnabled: Boolean,
+    onBack: () -> Unit, onFilter: (Boolean) -> Unit,
+    onToggleApp: (String, Boolean) -> Unit, onSelectAll: (Boolean) -> Unit
+) {
+    val allSelected = apps.isNotEmpty() && apps.all { selectedApps.contains(it.packageName) }
+    LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), contentPadding = PaddingValues(top = 10.dp, bottom = 24.dp)) {
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back", tint = Color.White) }
+                Column(Modifier.weight(1f)) {
+                    Text("Select apps", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                    Text("${selectedApps.size} selected", color = Accent, fontSize = 12.sp)
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+            SettingSwitch("Only selected apps", "When enabled, only checked apps can show notifications", filterEnabled, onFilter)
+            Row(
+                Modifier.fillMaxWidth().background(Card, RoundedCornerShape(12.dp)).padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text("Select all apps", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text("Choose or clear every app at once", color = Color.LightGray, fontSize = 11.sp)
+                }
+                Checkbox(checked = allSelected, onCheckedChange = onSelectAll, colors = CheckboxDefaults.colors(checkedColor = Accent))
+            }
+            Spacer(Modifier.height(8.dp))
+        }
+        items(apps, key = { it.packageName }) { app ->
+            Row(
+                Modifier.fillMaxWidth().background(Card, RoundedCornerShape(12.dp)).padding(horizontal = 12.dp, vertical = 7.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(app.label, color = Color.White, fontSize = 14.sp)
+                    Text(app.packageName, color = Color.Gray, fontSize = 10.sp)
+                }
+                Checkbox(
+                    checked = selectedApps.contains(app.packageName),
+                    onCheckedChange = { onToggleApp(app.packageName, it) },
+                    colors = CheckboxDefaults.colors(checkedColor = Accent)
+                )
+            }
+            Spacer(Modifier.height(5.dp))
+        }
+        item {
+            Spacer(Modifier.height(8.dp))
+            Button(onClick = onBack, modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(14.dp)) {
+                Icon(Icons.Default.Check, null); Spacer(Modifier.width(8.dp)); Text("Done")
+            }
+        }
+    }
 }
 
 @Composable
