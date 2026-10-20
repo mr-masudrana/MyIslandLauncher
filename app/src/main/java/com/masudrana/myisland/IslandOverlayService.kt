@@ -234,7 +234,7 @@ class IslandOverlayService : Service() {
             dp(IslandPrefs.pillWidth(this)), WindowManager.LayoutParams.WRAP_CONTENT, type,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.TRANSLUCENT
-        ).apply { gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL; y = dp(IslandPrefs.topOffset(this)) }
+        ).apply { gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL; y = dp(IslandPrefs.topOffset(this@IslandOverlayService)) }
     }
 
     private fun mediaButton(label: String, action: () -> Unit) = TextView(this).apply {
