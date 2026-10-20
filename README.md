@@ -48,3 +48,30 @@ A root-free Android floating pill demo for HyperOS. This is a source project; AP
 - Start/Stop buttons update immediately and reflect the service state.
 - Start button is disabled while running; Stop button is disabled while stopped.
 - This source has not been built on a device here; run GitHub Actions and share logs if it fails.
+
+
+## v0.4.3 notification-only behavior
+- Overlay is not displayed permanently after Start; it appears only when a non-system app posts a notification.
+- Notification pill auto-hides after five seconds but the service remains running.
+- Overlay is non-touchable, so tapping near the top cannot dismiss it.
+- Filters MyIsland and common Android/MIUI system package notifications and group-summary notifications.
+- Build/test on a real HyperOS device is still required; some OEM package names may differ.
+
+
+## v0.4.4 animated notifications and app icons
+- Notification pill opens with a short scale/fade animation and closes with a fade/scale animation.
+- Shows the source app's launcher icon when Android permits resolving that package.
+- The overlay remains non-touchable and auto-hides after five seconds.
+- Real-device build and HyperOS verification are still required.
+
+
+## v0.5.0 Notification Control
+- Dynamic Island pill appearance settings: top offset, width, height, and selectable colors.
+- Optional selected-app notification filter. With filtering enabled, only checked packages are displayed.
+- Music notification detection and playback controls for an active media session (previous/play-pause/next), when Android exposes an active session.
+- Charging state and battery percentage pop-up, controlled by a setting.
+- Notification text is processed locally; no network permission is added.
+- Requires overlay and notification access. HyperOS may restrict background activity; enable Autostart/background activity if needed.
+- This source update has not been built/tested on a physical device. Verify GitHub Actions logs and test media controls on device.
+
+- Overlay accepts touch so media buttons can be used; keep controls small and test interactions over other apps on HyperOS.
