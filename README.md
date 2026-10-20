@@ -1,32 +1,32 @@
-# MyIsland Launcher — starter
+# MyIsland — Dynamic Island only
 
-Kotlin + Jetpack Compose Android launcher starter for Redmi Note 12 4G / HyperOS. Root-free.
+A minimal Android app for a floating iPhone-inspired pill. It does not act as a launcher and does not replace HyperOS system UI.
 
 ## Included
-- Selectable Android HOME activity.
-- App grid, search, installed app icons and dock.
-- Branded Dynamic Island preview in the launcher.
-- Optional overlay demo pill (user must grant overlay permission and tap Start).
-- Notification listener placeholder that does not read, store or transmit notification text.
-- GitHub Actions debug APK workflow.
+- Standalone setup screen.
+- Explicit overlay permission and start/stop controls.
+- Floating pill overlay.
+- Basic charging/battery percentage display.
+- Optional notification listener declaration, with no notification text collection.
+- GitHub Actions workflow to build a debug APK.
 
-## Not yet implemented
-This starter is not a finished launcher. Real AppWidgetHost picker/placement, live notification-to-island bridge, media controls, charging events, icon-pack support, folders and gestures are follow-up milestones. Ordinary apps cannot fully replace Android's system notification shade or Quick Settings.
+## Build with GitHub Actions
+1. Upload these project files to a new GitHub repository (keep `.github/workflows/build.yml` path).
+2. Push to `main`, or run **Actions → Build MyIsland APK → Run workflow**.
+3. Download the `MyIsland-debug-apk` artifact from the successful workflow run.
+4. Extract the artifact ZIP and install `app-debug.apk`.
 
-## Build locally
-Install JDK 17 and Gradle 8.9+ then run `gradle assembleDebug`. APK: `app/build/outputs/apk/debug/app-debug.apk`.
+## On Redmi Note 12 4G / HyperOS
+1. Open MyIsland.
+2. Tap Allow for **Display over other apps**.
+3. Return and tap **Start Dynamic Island**.
+4. Notification access is optional and is not yet connected to the pill.
+5. To stop the floating pill, open the app and tap Stop Island.
 
-## Build on GitHub
-1. Create a repository and upload all files.
-2. Push to `main` or choose Actions → Build MyIsland APK → Run workflow.
-3. Download `MyIsland-debug-apk` artifact from the successful run and extract the APK.
-
-## First run on HyperOS
-1. Install APK and open MyIsland Launcher.
-2. Set it as default Home app if prompted.
-3. Settings button opens permission setup.
-4. Overlay permission is optional and only needed for the floating demo pill.
-5. Notification access is optional; current listener intentionally ignores notification contents.
-
-## Privacy and safety
-No Internet permission is declared. Notification content is not logged or uploaded. Overlay and notification access are sensitive; only enable after reviewing source. HyperOS may stop background processes. This debug APK is not a signed production release.
+## Privacy & limitations
+- No Internet permission is declared.
+- No root is required.
+- Notification content is not read, saved, logged, or uploaded.
+- The overlay is a basic starter; actual notification animations and media controls are future work.
+- HyperOS may restrict background services. Keep battery use in mind; do not disable system security protections.
+- Debug APK is for testing. For public distribution, configure a release signing key stored in GitHub Actions secrets, never in the repository.
