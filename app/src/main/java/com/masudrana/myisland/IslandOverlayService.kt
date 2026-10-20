@@ -21,24 +21,36 @@ class IslandOverlayService : Service() {
     private var wm: WindowManager? = null
     private var pill: TextView? = null
     private var expanded = false
+    private var lastTitle = "MY ISLAND"
+    private var lastText = "Ready"
+
+    private val eventReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action != NotificationCaptureService.ACTION_NOTIFICATION) return
+            lastTitle = intent.getStringExtra("title").orEmpty().ifBlank { "Notification" }.take(48)
+            lastText = intent.getStringExtra("text").orEmpty().take(100)
+            expanded = true
+            updatePill()
+        }
+    }
 
     private val batteryReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action != Intent.ACTION_BATTERY_CHANGED) return
             val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
             val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
-            val charging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
-                status == BatteryManager.BATTERY_STATUS_FULL
-            pill?.text = if (expanded) {
-                (if (charging) "⚡ Charging" else "MY ISLAND") + if (level >= 0) " • $level%" else ""
-            } else {
-                (if (charging) "⚡" else "●") + if (level >= 0) "  $level%" else "  MY ISLAND"
+            val charging = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
+            if (lastTitle == "MY ISLAND" || lastTitle == "Battery") {
+                lastTitle = if (charging) "⚡ Charging" else "Battery"
+                lastText = if (level >= 0) "$level%" else "Battery status"
+                updatePill()
             }
         }
     }
 
     override fun onCreate() {
         super.onCreate()
+        registerReceiver(eventReceiver, IntentFilter(NotificationCaptureService.ACTION_NOTIFICATION))
         registerReceiver(batteryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
     }
 
@@ -67,8 +79,11 @@ class IslandOverlayService : Service() {
             }
             setOnClickListener {
                 expanded = !expanded
-                text = if (expanded) "MY ISLAND  •  Tap to close" else "●  MY ISLAND"
-                setPadding(if (expanded) 48 else 36, 19, if (expanded) 48 else 36, 19)
+                if (!expanded) {
+                    lastTitle = "MY ISLAND"
+                    lastText = "Ready"
+                }
+                updatePill()
             }
         }
         val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
@@ -80,14 +95,27 @@ class IslandOverlayService : Service() {
             type,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
             PixelFormat.TRANSLUCENT
-        ).apply {
-            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-            y = 14
+        ).apply { gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL; y = 14 }
+        try { wm?.addView(pill, params); updatePill() } catch (_: Exception) { stopSelf() }
+    }
+
+    private fun updatePill() {
+        pill?.post {
+            pill?.text = if (expanded) {
+                if (lastText.isBlank()) lastTitle else "$lastTitle\n$lastText"
+            } else {
+                when {
+                    lastTitle.startsWith("⚡") -> "⚡ $lastText"
+                    lastTitle == "Battery" -> "●  $lastText"
+                    else -> "●  ${lastTitle.take(22)}"
+                }
+            }
+            pill?.setPadding(if (expanded) 28 else 36, if (expanded) 16 else 19, if (expanded) 28 else 36, if (expanded) 16 else 19)
         }
-        try { wm?.addView(pill, params) } catch (_: Exception) { stopSelf() }
     }
 
     override fun onDestroy() {
+        try { unregisterReceiver(eventReceiver) } catch (_: Exception) {}
         try { unregisterReceiver(batteryReceiver) } catch (_: Exception) {}
         try { pill?.let { wm?.removeView(it) } } catch (_: Exception) {}
         pill = null
@@ -95,5 +123,5 @@ class IslandOverlayService : Service() {
         super.onDestroy()
     }
 
-    override fun onBind(intent: Intent?): IBinder? = null
+    override fun onBind(intent: Intent?) = null
 }

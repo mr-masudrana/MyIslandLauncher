@@ -5,13 +5,13 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Tune
@@ -30,34 +30,34 @@ private val Card = Color(0xFF202431)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
-        setContent { MyIslandSetup() }
+        setContent { SetupScreen() }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Compose screen refreshes its own permission status on the next interaction.
     }
 }
 
 @Composable
-private fun MyIslandSetup() {
+private fun SetupScreen() {
     val context = androidx.compose.ui.platform.LocalContext.current
     var overlayAllowed by remember { mutableStateOf(Settings.canDrawOverlays(context)) }
     var listenerAllowed by remember { mutableStateOf(isNotificationListenerEnabled(context)) }
-    var running by remember { mutableStateOf(false) }
+    var status by remember { mutableStateOf("Island stopped") }
 
     MaterialTheme(colorScheme = darkColorScheme(primary = Accent, background = Background, surface = Card)) {
         Surface(Modifier.fillMaxSize(), color = Background) {
-            Column(
-                Modifier.fillMaxSize().padding(22.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Spacer(Modifier.height(30.dp))
+            Column(Modifier.fillMaxSize().padding(22.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Spacer(Modifier.height(32.dp))
                 Text("MYISLAND", color = Accent, fontSize = 13.sp, fontWeight = FontWeight.Bold, letterSpacing = 4.sp)
                 Spacer(Modifier.height(12.dp))
-                Text("Dynamic Island", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
-                Text("A small island. Useful moments.", color = Color.LightGray, fontSize = 14.sp)
+                Text("Notification Island", color = Color.White, fontSize = 29.sp, fontWeight = FontWeight.Bold)
+                Text("Your notifications, in one little island.", color = Color.LightGray, fontSize = 14.sp)
                 Spacer(Modifier.height(38.dp))
-                Box(
-                    Modifier.background(Color.Black, RoundedCornerShape(40.dp)).padding(horizontal = 28.dp, vertical = 17.dp),
-                    contentAlignment = Alignment.Center
-                ) {
+                Box(Modifier.background(Color.Black, RoundedCornerShape(40.dp)).padding(horizontal = 28.dp, vertical = 17.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(9.dp).background(Accent, RoundedCornerShape(50)))
                         Spacer(Modifier.width(12.dp))
@@ -65,13 +65,13 @@ private fun MyIslandSetup() {
                     }
                 }
                 Spacer(Modifier.height(12.dp))
-                Text("Preview • Tap Start to show the floating pill", color = Color.Gray, fontSize = 12.sp)
+                Text("v0.3.0 • notification events", color = Color.Gray, fontSize = 12.sp)
                 Spacer(Modifier.height(34.dp))
-                PermissionCard("Display over other apps", "Required to show the floating island", overlayAllowed, Icons.Default.Tune) {
+                PermissionCard("Display over other apps", "Required for the floating pill", overlayAllowed) {
                     context.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}")))
                 }
                 Spacer(Modifier.height(12.dp))
-                PermissionCard("Notification access", "Optional: detect notification events", listenerAllowed, Icons.Default.Notifications) {
+                PermissionCard("Notification access", "Reads notification title/text locally to show it in the pill", listenerAllowed) {
                     context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
                 }
                 Spacer(Modifier.weight(1f))
@@ -79,50 +79,45 @@ private fun MyIslandSetup() {
                     onClick = {
                         overlayAllowed = Settings.canDrawOverlays(context)
                         listenerAllowed = isNotificationListenerEnabled(context)
-                        if (overlayAllowed) {
+                        if (!overlayAllowed) {
+                            status = "Enable Display over other apps first"
+                        } else {
                             context.startService(Intent(context, IslandOverlayService::class.java))
-                            running = true
+                            status = if (listenerAllowed) "Island started — send a test notification" else "Island started — enable Notification access for alerts"
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(54.dp),
-                    shape = RoundedCornerShape(18.dp),
-                    enabled = overlayAllowed
-                ) {
-                    Icon(Icons.Default.BatteryChargingFull, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Start Dynamic Island")
-                }
+                    shape = RoundedCornerShape(18.dp)
+                ) { Text("Start Dynamic Island") }
                 Spacer(Modifier.height(10.dp))
                 OutlinedButton(
                     onClick = {
                         context.stopService(Intent(context, IslandOverlayService::class.java))
-                        running = false
+                        status = "Island stopped"
                     },
                     modifier = Modifier.fillMaxWidth().height(50.dp),
                     shape = RoundedCornerShape(18.dp)
                 ) {
-                    Icon(Icons.Default.PowerSettingsNew, contentDescription = null)
+                    Icon(Icons.Default.PowerSettingsNew, null)
                     Spacer(Modifier.width(8.dp))
                     Text("Stop Island")
                 }
-                Spacer(Modifier.height(10.dp))
-                Text(
-                    if (running) "Island started. It may be affected by HyperOS battery management."
-                    else "No root • No internet permission • Notification content is not uploaded",
-                    color = Color.Gray, fontSize = 11.sp
-                )
+                Spacer(Modifier.height(12.dp))
+                Text(status, color = Color.LightGray, fontSize = 12.sp)
+                Spacer(Modifier.height(8.dp))
+                Text("Notification text stays on this device; it is not uploaded.", color = Color.Gray, fontSize = 11.sp)
             }
         }
     }
 }
 
 @Composable
-private fun PermissionCard(title: String, description: String, enabled: Boolean, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
+private fun PermissionCard(title: String, description: String, enabled: Boolean, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().background(Card, RoundedCornerShape(16.dp)).padding(15.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, null, tint = Accent, modifier = Modifier.size(26.dp))
+        Icon(Icons.Default.Notifications, null, tint = Accent, modifier = Modifier.size(26.dp))
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(title, color = Color.White, fontWeight = FontWeight.SemiBold)

@@ -1,32 +1,37 @@
-# MyIsland — Dynamic Island only
+# MyIsland v0.4 — App Icon & Splash Screen
 
-A minimal Android app for a floating iPhone-inspired pill. It does not act as a launcher and does not replace HyperOS system UI.
+A root-free Android floating pill demo for HyperOS. This is a source project; APK is built with GitHub Actions.
 
-## Included
-- Standalone setup screen.
-- Explicit overlay permission and start/stop controls.
-- Floating pill overlay.
-- Basic charging/battery percentage display.
-- Optional notification listener declaration, with no notification text collection.
-- GitHub Actions workflow to build a debug APK.
-
-## Build with GitHub Actions
-1. Upload these project files to a new GitHub repository (keep `.github/workflows/build.yml` path).
-2. Push to `main`, or run **Actions → Build MyIsland APK → Run workflow**.
-3. Download the `MyIsland-debug-apk` artifact from the successful workflow run.
-4. Extract the artifact ZIP and install `app-debug.apk`.
-
-## On Redmi Note 12 4G / HyperOS
-1. Open MyIsland.
-2. Tap Allow for **Display over other apps**.
-3. Return and tap **Start Dynamic Island**.
-4. Notification access is optional and is not yet connected to the pill.
-5. To stop the floating pill, open the app and tap Stop Island.
-
-## Privacy & limitations
+## Features
+- Custom MyIsland adaptive app icon.
+- Branded dark splash screen with a lime Dynamic Island mark.
+- Floating overlay pill.
+- Shows notification title/text briefly in the pill when Android sends notification events.
+- Basic battery/charging indicator.
+- Tap pill to expand/collapse.
+- Notification text is handled locally only: not logged, saved persistently, or uploaded.
 - No Internet permission is declared.
-- No root is required.
-- Notification content is not read, saved, logged, or uploaded.
-- The overlay is a basic starter; actual notification animations and media controls are future work.
-- HyperOS may restrict background services. Keep battery use in mind; do not disable system security protections.
-- Debug APK is for testing. For public distribution, configure a release signing key stored in GitHub Actions secrets, never in the repository.
+
+## Build APK
+1. Upload all files to a GitHub repository, preserving `.github/workflows/build.yml`.
+2. Push to `main` or go to **Actions → Build MyIsland APK → Run workflow**.
+3. Download `MyIsland-v0.3-debug-apk` artifact from a successful run.
+4. Extract it and install `app-debug.apk`.
+
+## Setup on HyperOS
+1. Open MyIsland and grant **Display over other apps**.
+2. Grant **Notification access** from Android settings. This is sensitive: it allows the app to read notification content.
+3. Return to MyIsland and tap **Start Dynamic Island**.
+4. Send a test notification from another app.
+5. If the overlay stops, reopen MyIsland and start it again; HyperOS battery management may restrict background services.
+
+## Limitations
+- This is an initial notification integration; notifications are not yet filtered by app and may include sensitive content on-screen.
+- The notification listener reads title/text only to display them locally. No network permission is present.
+- No quick reply, media controls, or production-grade animation yet.
+- Do not commit signing keys. Debug APK is for testing only.
+
+## v0.4 icon and splash changes
+- Launcher icon uses Android adaptive icon resources, suitable for modern Android launchers.
+- Splash screen uses AndroidX Core SplashScreen and automatically transitions to the app theme.
+- To see the new icon, install/update the APK. If HyperOS caches the old icon, clear launcher cache or reboot; do not clear MyIsland app data unless necessary.

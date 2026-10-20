@@ -1,0 +1,16 @@
+<resources>
+    <style name="Theme.MyIsland" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:colorAccent">@color/myisland_accent</item>
+        <item name="android:statusBarColor">@color/myisland_bg</item>
+        <item name="android:navigationBarColor">@color/myisland_bg</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowActionModeOverlay">true</item>
+    </style>
+    <style name="Theme.MyIsland.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/myisland_bg</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_myisland_splash</item>
+        <item name="windowSplashScreenAnimationDuration">450</item>
+        <item name="postSplashScreenTheme">@style/Theme.MyIsland</item>
+    </style>
+</resources>
